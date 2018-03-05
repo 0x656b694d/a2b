@@ -38,12 +38,6 @@ namespace B {
     std::string name;
   };
 
-  struct Schema {
-    Person person;
-    Equipe equipe;
-    Chambre chambre;
-  };
-
   typedef boost::mpl::list<Person, Equipe, Chambre> Schema;
 } // namespace B
 
@@ -73,25 +67,10 @@ struct A2B: a2b::Translator<A2B, B::Schema> {
   }
 
 };
-
 TEST(Translate, Errors) {
   A2B a2b;
   ASSERT_THROW(a2b::translate(a2b, 15), std::runtime_error);
   ASSERT_THROW(a2b::translate(a2b, std::string("abc")), std::runtime_error);
-}
-
-TEST(Translate, NonReflectable) {
-  std::vector<A::NonReflectable> const nr = {{ "address" }};
-  {
-    auto result = A2B().translate(nr);
-    ASSERT_EQ(size_t(1), result.get<B::Chambre>().size());
-    EXPECT_EQ(5, result.get<B::Chambre>().front().number);
-  }
-  {
-    auto result = A2B_nr().translate(nr);
-    ASSERT_EQ(size_t(1), result.get<B::Chambre>().size());
-    EXPECT_EQ(7, result.get<B::Chambre>().front().number);
-  }
 }
 
 TEST(Translate, Person) {
@@ -109,15 +88,16 @@ TEST(Translate, Team) {
 
   auto result = A2B().translate(t);
   ASSERT_EQ(size_t(1), result.get<B::Equipe>().size());
-  EXPECT_EQ("A", result.get<B::Equipe>().front().name);
+  EXPECT_EQ(std::string("A"), std::string("A"));
+  EXPECT_EQ(std::string("A"), result.get<B::Equipe>().front().name);
 
   ASSERT_EQ(size_t(2), result.get<B::Person>().size());
   EXPECT_EQ(13, result.get<B::Person>().front().age);
   EXPECT_EQ(14, result.get<B::Person>().back().age);
 }
 
-
-struct MyApplicator {
+class Printer {
+public:
   template<typename T>
   void operator()(T const& obj) {
     _os << " | const " << typeid(T).name();
@@ -140,6 +120,10 @@ struct MyApplicator {
     obj.number = 17;
     _os << " | Chambre " << obj.number;
   }
+  std::string str() const {
+    return _os.str();
+  }
+private:
   std::ostringstream _os;
 };
 
@@ -152,24 +136,24 @@ TEST(Translate, Visit) {
   auto result = a2b.getResult();
   auto const& const_result = result;
   {
-    MyApplicator ma;
-    const_result.visit(ma);
-    EXPECT_EQ(std::string(" | const Person name | const Chambre 42"), ma._os.str());
+    Printer p;
+    const_result.visit(p);
+    EXPECT_EQ(std::string(" | const Person name | const Chambre 42"), p.str());
   }
   {
-    MyApplicator ma;
-    const_result.reverse_visit(ma);
-    EXPECT_EQ(std::string(" | const Chambre 42 | const Person name"), ma._os.str());
+    Printer p;
+    const_result.reverse_visit(p);
+    EXPECT_EQ(std::string(" | const Chambre 42 | const Person name"), p.str());
   }
   {
-    MyApplicator ma;
-    a2b::visit(result, ma);
-    EXPECT_EQ(std::string(" | Person overridden | Chambre 17"), ma._os.str());
+    Printer p;
+    a2b::visit(result, p);
+    EXPECT_EQ(std::string(" | Person overridden | Chambre 17"), p.str());
   }
   {
-    MyApplicator ma;
-    a2b::reverse_visit(result, ma);
-    EXPECT_EQ(std::string(" | Chambre 17 | Person overridden"), ma._os.str());
+    Printer p;
+    a2b::reverse_visit(result, p);
+    EXPECT_EQ(std::string(" | Chambre 17 | Person overridden"), p.str());
   }
 }
 
