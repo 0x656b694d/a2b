@@ -293,4 +293,6 @@ namespace a2b {
     internal::reverse_visit(result.getValue(), f);
   }
 
+  struct Visitor {};
+
 } // namespace model
