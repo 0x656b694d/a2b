@@ -1,0 +1,182 @@
+#include <gtest/gtest.h>
+#include <a2b/translator.h>
+
+#include <sstream>
+
+namespace A {
+
+  struct Person {
+    std::string name;
+    int age;
+  };
+
+  struct Room {
+    int number;
+  };
+
+  struct Team {
+    std::string name;
+    std::vector<Person> people;
+  };
+
+} // namespace A
+
+namespace B {
+
+  struct Person {
+    int team_id;
+    std::string name;
+    int age;
+  };
+
+  struct Chambre {
+    int number;
+  };
+
+  struct Equipe {
+    int id;
+    std::string name;
+  };
+
+  struct Schema {
+    Person person;
+    Equipe equipe;
+    Chambre chambre;
+  };
+
+  typedef boost::mpl::list<Person, Equipe, Chambre> Schema;
+} // namespace B
+
+struct A2B: a2b::Translator<A2B, B::Schema> {
+
+  using base_type::translate;
+
+  bool translate(A::Person const& ap, int const team_id) {
+    return add(B::Person{ team_id, ap.name, ap.age });
+  }
+
+  bool translate(A::Person const& ap) {
+    return translate(ap, 0);
+  }
+
+  bool translate(A::Team const& at) {
+    int const team_id = 0;
+    bool result = add(B::Equipe{ team_id, at.name });
+    for (A::Person const& ap: at.people) {
+        translate(ap, team_id);
+    }
+    return result;
+  }
+
+  bool translate(A::Room const& aroom) {
+    return add(B::Chambre{ aroom.number });
+  }
+
+};
+
+TEST(Translate, Errors) {
+  A2B a2b;
+  ASSERT_THROW(a2b::translate(a2b, 15), std::runtime_error);
+  ASSERT_THROW(a2b::translate(a2b, std::string("abc")), std::runtime_error);
+}
+
+TEST(Translate, NonReflectable) {
+  std::vector<A::NonReflectable> const nr = {{ "address" }};
+  {
+    auto result = A2B().translate(nr);
+    ASSERT_EQ(size_t(1), result.get<B::Chambre>().size());
+    EXPECT_EQ(5, result.get<B::Chambre>().front().number);
+  }
+  {
+    auto result = A2B_nr().translate(nr);
+    ASSERT_EQ(size_t(1), result.get<B::Chambre>().size());
+    EXPECT_EQ(7, result.get<B::Chambre>().front().number);
+  }
+}
+
+TEST(Translate, Person) {
+  std::list<A::Person> const a = {{"name", 13}};
+  auto result = A2B().translate(a);
+  ASSERT_EQ(size_t(1), result.get<B::Person>().size());
+  EXPECT_EQ(13, result.get<B::Person>().front().age);
+}
+
+TEST(Translate, Team) {
+  std::vector<A::Team> const t = {{ "A",
+    {{"Howling Mad Murdock", 13},
+    {"B. A. Baracus", 14}}
+  }};
+
+  auto result = A2B().translate(t);
+  ASSERT_EQ(size_t(1), result.get<B::Equipe>().size());
+  EXPECT_EQ("A", result.get<B::Equipe>().front().name);
+
+  ASSERT_EQ(size_t(2), result.get<B::Person>().size());
+  EXPECT_EQ(13, result.get<B::Person>().front().age);
+  EXPECT_EQ(14, result.get<B::Person>().back().age);
+}
+
+
+struct MyApplicator {
+  template<typename T>
+  void operator()(T const& obj) {
+    _os << " | const " << typeid(T).name();
+  }
+  template<typename T>
+  void operator()(T& obj) {
+    _os << " | " << typeid(T).name();
+  }
+  void operator()(B::Person const& obj) {
+    _os << " | const Person " << obj.name;
+  }
+  void operator()(B::Chambre const& obj) {
+    _os << " | const Chambre " << obj.number;
+  }
+  void operator()(B::Person& obj) {
+    obj.name = "overridden";
+    _os << " | Person " << obj.name;
+  }
+  void operator()(B::Chambre& obj) {
+    obj.number = 17;
+    _os << " | Chambre " << obj.number;
+  }
+  std::ostringstream _os;
+};
+
+TEST(Translate, Visit) {
+  std::vector<A::Person> const ap = {{ "name", 13 }};
+  std::vector<A::Room> const ar = {{ 42 }};
+  A2B a2b;
+  a2b.translate(ap);
+  a2b.translate(ar);
+  auto result = a2b.getResult();
+  auto const& const_result = result;
+  {
+    MyApplicator ma;
+    const_result.visit(ma);
+    EXPECT_EQ(std::string(" | const Person name | const Chambre 42"), ma._os.str());
+  }
+  {
+    MyApplicator ma;
+    const_result.reverse_visit(ma);
+    EXPECT_EQ(std::string(" | const Chambre 42 | const Person name"), ma._os.str());
+  }
+  {
+    MyApplicator ma;
+    a2b::visit(result, ma);
+    EXPECT_EQ(std::string(" | Person overridden | Chambre 17"), ma._os.str());
+  }
+  {
+    MyApplicator ma;
+    a2b::reverse_visit(result, ma);
+    EXPECT_EQ(std::string(" | Chambre 17 | Person overridden"), ma._os.str());
+  }
+}
+
+int main(int argc, char* argv[])
+{
+  ::testing::InitGoogleTest(&argc, argv);
+
+  return RUN_ALL_TESTS();
+}
+
