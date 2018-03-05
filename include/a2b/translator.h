@@ -1,26 +1,21 @@
 /*
  * Model translation utility
  *
- * http://github.com/0x656b694d/a2b
+ * https://github.com/0x656b694d/a2b
  *
  */
 #include <list>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <tuple>
 
 #include <boost/mpl/at.hpp>
-#include <boost/mpl/copy.hpp>
 #include <boost/mpl/find.hpp>
-#include <boost/mpl/for_each.hpp>
-#include <boost/mpl/if.hpp>
 #include <boost/mpl/list.hpp>
 #include <boost/mpl/placeholders.hpp>
 #include <boost/mpl/size.hpp>
 #include <boost/mpl/transform.hpp>
-#include <boost/mpl/vector.hpp>
-
 
 namespace a2b {
 
