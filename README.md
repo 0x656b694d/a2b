@@ -1,17 +1,19 @@
-# Model translation utility
+# Model Translation Utility
 
-The objective of the utility is to simplify the transformation of one object model to another.
-A model represents a list of objects. A single object in the source model can be transformed to a number of objects in destination model.
-The utility generates a special structure that holds lists of objects of all the classes of the destination model,
-provides a method to fill the destination model with the transformed objects and takes care of the order of visiting.
-Examples of such transformations are: BOM to JSON model, or a set of CSV tables to BOM, BOM to ORM etc.
+The objective of the utility is to simplify the translation of one object model to another.
+
+A model represents a list of classes. A single object of a class in the source model can be translated to a number of objects of different classes in the destination model.
+
+The utility generates in compile time a special structure that allows for holding lists of objects of all the classes of the destination model, provides a method to fill this structure with the translated objects and takes care of the order of visiting.
+
+Examples of such transformations are: BOM to API, BOM to ORM etc. One may need to support several versions of such transformations.
 
 The usage consists of these steps:
 
-1. You define the destination model as a list of the classes of the model in the order you want to visit them later;
-1. You define the translation functions for your objects in a structure derived from `a2b::Translator`;
-1. You apply the transformation by calling the `translate` method of the translator;
-1. You visit the objects with a visitor or manually by inspecting the result of the translation.
+1. Define the destination model as a list of the classes of the model in the order you want to visit them later;
+1. Define the translation functions for your objects in a structure derived from `a2b::Translator`;
+1. Apply the transformation by calling the `translate` method of the translator;
+1. Visit the objects with a visitor or manually by inspecting the result of the translation.
 
 To define a model declare a `boost::mpl::list` like this:
 
