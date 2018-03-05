@@ -61,3 +61,11 @@ result.visit(MyVisitor());
 
 Use `reverse_visit` to visit in the reverse order.
 
+# Run tests
+
+```sh
+cmake CMakeLists.txt
+make
+./runTests
+
+```
