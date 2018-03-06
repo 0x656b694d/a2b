@@ -4,9 +4,11 @@ The objective of the utility is to simplify the translation of one object model 
 
 A model represents a list of classes. A single object of a class in the source model can be translated to a number of objects of different classes in the destination model.
 
-The utility generates in compile time a special structure that allows for holding lists of objects of all the classes of the destination model, provides a method to fill this structure with the translated objects and takes care of the order of visiting.
+The utility generates in compile time a special structure, which is `std::tuple<std::list<T1>, std::list<T2>, ...>`, where each `std::list<Tn>` holds a number of objects of the destination model. In your translation operator you call the provided `add()` method which fills the appropriate list. After the translation is complete (= the structure is filled), you may visit all the generated objects in the order of types that you specified in the model definition. You define the model as a `boost::mpl::list<T1, T2, ...>`.
 
 Examples of such transformations are: BOM to API, BOM to ORM etc. One may need to support several versions of such transformations.
+
+# Usage
 
 The usage consists of these steps:
 
@@ -71,3 +73,6 @@ make
 ./runTests
 
 ```
+
+# Example
+https://github.com/0x656b694d/a2b/blob/master/test/uttranslator.cpp
