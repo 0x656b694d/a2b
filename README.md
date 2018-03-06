@@ -25,7 +25,7 @@ The usage consists of these steps:
      }
    };
    ```
-   The `add` function returns an intermidiate result (a reference) which `translate` should return as well.
+   The `add` function returns an intermediate result (a reference) which `translate` should return as well.
 
 1. Translate an object (or `std::vector`, or `std::list`) by calling the `translate` method:
    ```c++
