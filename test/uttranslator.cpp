@@ -51,45 +51,48 @@ class A2B: public a2b::Translator<A2B, B::Model> {
 public:
 
   using base_type::translate;
+ 
+  A2B(): team_id(0) {}
 
-  bool translate(A::Person const& ap) {
-    return add_team_person(0, ap);
+  result_type translate(A::Person const& ap) {
+    return add(B::Personne{ team_id, ap.name, ap.age });
   }
 
-  bool translate(A::Team const& at) {
-    int const team_id = 0;
-    bool result = add(B::Equipe{ team_id, at.name });
-    for (A::Person const& ap: at.people) {
-      add_team_person(team_id, ap);
-    }
+  result_type translate(A::Team const& at) {
+    add(B::Equipe{ team_id, at.name });
+    result_type result = translate(at.people);
+    ++team_id;
     return result;
   }
 
-  bool translate(A::Room const& aroom) {
+  result_type translate(A::Room const& aroom) {
     return add(B::Chambre{ aroom.number });
   }
 
 private:
-
-  bool add_team_person(int const team_id, A::Person const& ap) {
-    return add(B::Personne{ team_id, ap.name, ap.age });
-  }
+  int team_id;
 };
 
 TEST(Translate, Errors) {
   A2B tr;
   // The utility cannot translate random types
-  ASSERT_THROW(a2b::translate(tr, 15), std::runtime_error);
-  ASSERT_THROW(a2b::translate(tr, std::string("abc")), std::runtime_error);
+  ASSERT_THROW(tr.translate(15), std::runtime_error);
+  ASSERT_THROW(tr.translate(std::string("abc")), std::runtime_error);
 }
 
 TEST(Translate, Person) {
-  // Having a list of Persons
-  std::list<A::Person> const a = {{"Lisa", 8}, {"Bart", 10}};
-  auto result = A2B().translate(a);
+  A2B tr;
+  // Having a single Person
+  A::Person const simpson = { "Homer", 39 };
+  auto const& result = tr.translate(simpson);
+  ASSERT_EQ(size_t(1), result.get<B::Personne>().size());
+  // and having a list of Persons
+  std::list<A::Person> const simpsons = {{"Lisa", 8}, {"Bart", 10}};
+  tr.translate(simpsons);
   // ... we get a list of Personnes
-  ASSERT_EQ(size_t(2), result.get<B::Personne>().size());
-  EXPECT_EQ(8, result.get<B::Personne>().front().age);
+  ASSERT_EQ(size_t(3), result.get<B::Personne>().size());
+  EXPECT_EQ(39, result.get<B::Personne>().front().age);
+  EXPECT_EQ("Lisa", (++result.get<B::Personne>().begin())->name);
   EXPECT_EQ(10, result.get<B::Personne>().back().age);
 }
 

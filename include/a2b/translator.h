@@ -11,16 +11,11 @@
 #include <tuple>
 
 #include <boost/mpl/at.hpp>
-#include <boost/mpl/copy.hpp>
 #include <boost/mpl/find.hpp>
-#include <boost/mpl/for_each.hpp>
-#include <boost/mpl/if.hpp>
 #include <boost/mpl/list.hpp>
 #include <boost/mpl/placeholders.hpp>
 #include <boost/mpl/size.hpp>
 #include <boost/mpl/transform.hpp>
-#include <boost/mpl/vector.hpp>
-
 
 namespace a2b {
 
@@ -167,9 +162,9 @@ namespace a2b {
     }
 
     template<typename T>
-    bool add(T const& value) {
+    value_type& add(T const& value) {
       std::get<Index<T>::value>(_value).push_back(value);
-      return true;
+      return _value;
     }
 
     value_type const& getValue() const { return _value; }
@@ -207,22 +202,18 @@ namespace a2b {
   class Translator {
   public:
     using value_type = V;
+    using result_type = V&;
     using model_type = Model;
     using base_type = Translator<UserTranslator, Model, V>;
 
     // Generic translators
     template<typename T>
-    void translate(T const&) const {
+    result_type translate(T const&) const {
       throw std::runtime_error(std::string("Missing translation for ") + typeid(T).name());
     }
-
+    
     template<typename T>
     value_type translate(std::vector<T> const& sequence) && {
-      return translate_sequence(sequence);
-    }
-
-    template<typename T>
-    value_type& translate(std::vector<T> const& sequence) & {
       return translate_sequence(sequence);
     }
 
@@ -232,14 +223,20 @@ namespace a2b {
     }
 
     template<typename T>
-    value_type& translate(std::list<T> const& sequence) & {
+    result_type translate(std::vector<T> const& sequence) & {
+      return translate_sequence(sequence);
+    }
+
+    template<typename T>
+    result_type translate(std::list<T> const& sequence) & {
       return translate_sequence(sequence);
     }
     // end of generic translators
 
     template<typename T>
-    bool add(T const& obj) {
-      return _result.add(obj);
+    result_type add(T const& obj) {
+      _result.add(obj);
+      return _result;
     }
 
     value_type const& getResult() const {
@@ -255,7 +252,7 @@ namespace a2b {
 
   private:
     template<typename T>
-    value_type& translate_sequence(T const& sequence) {
+    result_type translate_sequence(T const& sequence) {
       for (typename T::value_type const& obj: sequence) {
         static_cast<UserTranslator*>(this)->translate(obj);
       }
@@ -265,13 +262,8 @@ namespace a2b {
     value_type _result;
 
     template<typename UT, typename T>
-    friend void translate(UT&&, T const&);
+    friend value_type&& translate(UT&&, T const&);
   }; // class Translator
-
-  template<typename UserTranslator, typename T>
-  void translate(UserTranslator&& tr, T const& obj) {
-    tr.translate(obj);
-  }
 
   template<typename I, typename F>
   void visit(I const& result, F& f) {
