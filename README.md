@@ -4,7 +4,7 @@ The objective of the utility is to simplify the translation of one object model 
 
 A model represents a list of classes. A single object of a class in the source model can be translated to a number of objects of different classes in the destination model.
 
-The utility generates in compile time a special structure, which is `std::tuple<std::list<T1>, std::list<T2>, ...>`, where each `std::list<Tx>` may hold a number of objects of the destination model. The model is defined as a `boost::mpl::list<T1, T2, ...>`. In your translation method you call the provided `add(tx)` function which appends to the appropriate list. After the translation is complete (= the structure is filled), you may visit all the generated objects in the order of types that you have specified in the model definition. The order matters in the case when, for example, you need to create parent objects before creating children which reference the parent. The reverse order would allow for deleting children before deleting the parent.
+The utility generates in compile time a special structure, which has inside an `std::tuple<std::list<T1>, std::list<T2>, ...>`, where each `std::list<Tx>` may hold a number of objects of the destination model. The model is defined as a `boost::mpl::list<T1, T2, ...>`. In your translation method you call the provided `add(tx)` function which appends to the appropriate list. After the translation is complete (= the structure is filled), you may visit all the generated objects in the order of types that you have specified in the model definition. The order matters in the case when, for example, you need to create parent objects before creating children which reference the parent. The reverse order would allow for deleting children before deleting the parent.
 
 Examples of such transformations are: BOM to API, ORM to BOM etc. You may need to support several versions of such transformations.
 
@@ -20,20 +20,23 @@ The usage consists of these steps:
    ```c++
    class Translate2B: public a2b::Translator<Translate2B, ModelB> {
    public:
-     void translate(ObjectA1 const& obj) {
-       add( ObjectB1{ obj.x, obj.y } );
+     result_type translate(ObjectA1 const& obj) {
+       return add( ObjectB1{ obj.x, obj.y } );
      }
    };
    ```
+   The `add` function returns an intermediate result (a reference) which `translate` should return as well.
+
 1. Translate an object (or `std::vector`, or `std::list`) by calling the `translate` method:
    ```c++
    std::vector<ObjectA1> const a1s = { ... };
    ObjectA2 const a2;
    
    Translate2B tr;
-   tr.translate(a2);
-   auto result = tr.translate(a1s);
+   auto const& result = tr.translate(a2); // Here you call directly your translate method
+   tr.translate(a1s); // Here you continue filling the same result object
    ```
+
 1. Visit the objects with a visitor or manually by inspecting the result of the translation:
    ```c++
    std::list<ObjectB1>& b1 = result.get<ObjectB1>();
