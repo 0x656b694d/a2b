@@ -8,6 +8,8 @@ The utility generates in compile time a special structure, which has inside an `
 
 Examples of such transformations are: BOM to API, ORM to BOM etc. You may need to support several versions of such transformations.
 
+![Scheme](docs/scheme.svg)
+
 ## Usage
 
 The usage consists of these steps:
