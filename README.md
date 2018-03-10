@@ -27,7 +27,13 @@ The usage consists of these steps:
    ```
    The `add` function returns an intermediate result (a reference) which `translate` should return as well.
 
-1. Translate an object (or `std::vector`, or `std::list`) by calling the `translate` method:
+   The internal collection type, which by default is `std::list`, is configurable via the `a2b::Translator` third template parameter, like this:
+   ```c++
+   class Translate2B: public a2b::Translator<Translate2B, ModelB, std::vector>;
+   ```
+   The result of the translation in this case will be an `std::tuple` of different `std::vector` types.
+
+1. Translate an object (or a collection of objects) by calling the `translate` method:
    ```c++
    std::vector<ObjectA1> const a1s = { ... };
    ObjectA2 const a2;

@@ -1,14 +1,11 @@
 /*
- * Model translation utility
+ * Model Translation Utility
  *
  * https://github.com/0x656b694d/a2b
  *
  */
 #include <list>
 #include <tuple>
-#include <type_traits>
-#include <utility>
-#include <vector>
 
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/find.hpp>
@@ -21,13 +18,14 @@ namespace a2b {
 
   namespace internal {
     /*
-     * Transforming a boost::mpl type list to an std::tuple so we can
-     * instanciate this type list
+     * Transforming boost::mpl to std::tuple
      */
-    template <typename SEQ, size_t N> struct vector_at : boost::mpl::at_c<SEQ, N>
+    template <typename SEQ, size_t N>
+    struct vector_at : boost::mpl::at_c<SEQ, N>
     {};
 
-    template <typename... TYPES, size_t N> struct vector_at<std::tuple<TYPES...>, N>
+    template <typename... TYPES, size_t N>
+    struct vector_at<std::tuple<TYPES...>, N>
     : std::tuple_element<N, std::tuple<TYPES...>>
     {};
 
@@ -41,15 +39,14 @@ namespace a2b {
     };
 
     template <typename SEQ>
-    struct Tuplify: convert_helper<SEQ, boost::mpl::size<SEQ>::value>
-    {};
+    using Tuplified = convert_helper<SEQ, boost::mpl::size<SEQ>::value>;
 
     /*
-    * Transforming a type list to a list of std::list of the internal types,
-    * i.e. boost::mpl::list<A> -> boost::mpl::list<std::list<A>>
+    * Transforming a type list to a type list of containers of the internal types,
+    * i.e. boost::mpl::list<T> -> boost::mpl::list<std::list<T>>
     */
-    template<typename T>
-    using Listified = typename boost::mpl::transform<T, std::list<boost::mpl::_1>>::type;
+    template<typename T, template<class...> class C>
+    using Listified = typename boost::mpl::transform<T, C<boost::mpl::_1>>::type;
 
     template<typename F, typename Tuple, std::size_t N>
     class TupleVisitor {
@@ -83,21 +80,21 @@ namespace a2b {
       F &_func;
     };
 
-    template<typename F>
+    template<typename F, template<class...> class C>
     class Applicator {
     public:
       explicit Applicator(F& f): _func(f)
       {}
 
       template<typename D>
-      void operator()(std::list<D> const& x) const {
+      void operator()(C<D> const& x) const {
         for (D const& d: x) {
           _func(d);
         }
       }
 
       template<typename D>
-      void operator()(std::list<D>& x) const {
+      void operator()(C<D>& x) const {
         for (D& d: x) {
           _func(d);
         }
@@ -107,57 +104,60 @@ namespace a2b {
       F &_func;
     };
 
-    template<typename F, typename... Args>
+    template<template<class...> class C, typename F, typename... Args>
     F& visit(std::tuple<Args...> const& t, F& f)
     {
-      using tmp = TupleVisitor<Applicator<F>, decltype(t), sizeof...(Args)>;
-      Applicator<F> a(f);
+      using tmp = TupleVisitor<Applicator<F, C>, decltype(t), sizeof...(Args)>;
+      Applicator<F, C> a(f);
       tmp(a).accept(t);
       return f;
     }
 
-    template<typename F, typename... Args>
+    template<template<class...> class C, typename F, typename... Args>
     F& visit(std::tuple<Args...>& t, F& f)
     {
-      using tmp = TupleVisitor<Applicator<F>, decltype(t), sizeof...(Args)>;
-      Applicator<F> a(f);
+      using tmp = TupleVisitor<Applicator<F, C>, decltype(t), sizeof...(Args)>;
+      Applicator<F, C> a(f);
       tmp(a).accept(t);
       return f;
     }
 
-    template<typename F, typename... Args>
+    template<template<class...> class C, typename F, typename... Args>
     F& reverse_visit(std::tuple<Args...> const& t, F& f)
     {
-      using tmp = TupleVisitor<Applicator<F>, decltype(t), sizeof...(Args)>;
-      Applicator<F> a(f);
+      using tmp = TupleVisitor<Applicator<F, C>, decltype(t), sizeof...(Args)>;
+      Applicator<F, C> a(f);
       tmp(a).reverse_accept(t);
       return f;
     }
 
-    template<typename F, typename... Args>
+    template<template<class...> class C, typename F, typename... Args>
     F& reverse_visit(std::tuple<Args...>& t, F& f)
     {
-      using tmp = TupleVisitor<Applicator<F>, decltype(t), sizeof...(Args)>;
-      Applicator<F> a(f);
+      using tmp = TupleVisitor<Applicator<F, C>, decltype(t), sizeof...(Args)>;
+      Applicator<F, C> a(f);
       tmp(a).reverse_accept(t);
       return f;
     }
 
   } // internal
 
-  template<typename ListifiedModel>
+  template<typename ListifiedModel, template<class...> class C>
   class Instance {
   public:
     using listified_type = ListifiedModel;
-    using value_type = typename internal::Tuplify<listified_type>::type;
+    using value_type = typename internal::Tuplified<listified_type>::type;
+
+    template<typename ...T>
+    using container_type = C<T...>;
 
     template<typename T>
-    std::list<T>& get() {
+    C<T>& get() {
       return std::get<Index<T>::value>(_value);
     }
 
     template<typename T>
-    std::list<T> const& get() const {
+    C<T> const& get() const {
       return std::get<Index<T>::value>(_value);
     }
 
@@ -172,19 +172,19 @@ namespace a2b {
 
     template<typename F>
     void visit(F& f) {
-      internal::visit(_value, f);
+      internal::visit<container_type>(_value, f);
     }
     template<typename F>
     void visit(F& f) const {
-      internal::visit(_value, f);
+      internal::visit<container_type>(_value, f);
     }
     template<typename F>
     void reverse_visit(F& f) {
-      internal::reverse_visit(_value, f);
+      internal::reverse_visit<container_type>(_value, f);
     }
     template<typename F>
     void reverse_visit(F& f) const {
-      internal::reverse_visit(_value, f);
+      internal::reverse_visit<container_type>(_value, f);
     }
   private:
 
@@ -192,19 +192,23 @@ namespace a2b {
     struct Index {
       static size_t const value = boost::mpl::distance<
         typename boost::mpl::begin<listified_type>::type,
-        typename boost::mpl::find<listified_type, std::list<T>>::type>::value;
+        typename boost::mpl::find<listified_type, C<T>>::type>::value;
     };
 
     value_type _value;
   };
 
-  template<typename UserTranslator, typename Model, typename V = Instance<internal::Listified<Model>>>
+  template<typename UserTranslator, typename Model,
+           template<class...> class C = std::list,
+           typename V = Instance<internal::Listified<Model, C>, C>>
   class Translator {
   public:
     using value_type = V;
     using result_type = V&;
     using model_type = Model;
-    using base_type = Translator<UserTranslator, Model, V>;
+    using base_type = Translator<UserTranslator, Model, C, V>;
+    template<typename ...T>
+    using container_type = C<T...>;
 
     // Generic translators
     template<typename T>
@@ -212,23 +216,13 @@ namespace a2b {
       throw std::runtime_error(std::string("Missing translation for ") + typeid(T).name());
     }
     
-    template<typename T>
-    value_type translate(std::vector<T> const& sequence) && {
+    template<template<class...> class CC, typename T>
+    value_type translate(CC<T> const& sequence) && {
       return translate_sequence(sequence);
     }
 
-    template<typename T>
-    value_type translate(std::list<T> const& sequence) && {
-      return translate_sequence(sequence);
-    }
-
-    template<typename T>
-    result_type translate(std::vector<T> const& sequence) & {
-      return translate_sequence(sequence);
-    }
-
-    template<typename T>
-    result_type translate(std::list<T> const& sequence) & {
+    template<template<class...> class CC, typename T>
+    result_type translate(CC<T> const& sequence) & {
       return translate_sequence(sequence);
     }
     // end of generic translators
@@ -253,7 +247,7 @@ namespace a2b {
   private:
     template<typename T>
     result_type translate_sequence(T const& sequence) {
-      for (typename T::value_type const& obj: sequence) {
+      for (auto&& obj: sequence) {
         static_cast<UserTranslator*>(this)->translate(obj);
       }
       return _result;
@@ -261,30 +255,31 @@ namespace a2b {
 
     value_type _result;
 
-    template<typename UT, typename T>
-    friend value_type&& translate(UT&&, T const&);
   }; // class Translator
 
   template<typename I, typename F>
   void visit(I const& result, F& f) {
-    internal::visit(result.getValue(), f);
+    internal::visit<I::container_type>(result.getValue(), f);
   }
 
   template<typename I, typename F>
   void visit(I& result, F& f) {
-    internal::visit(result.getValue(), f);
+    internal::visit<I::template container_type>(result.getValue(), f);
   }
 
   template<typename I, typename F>
   void reverse_visit(I const& result, F& f) {
-    internal::reverse_visit(result.getValue(), f);
+    internal::reverse_visit<I::container_type>(result.getValue(), f);
   }
 
   template<typename I, typename F>
   void reverse_visit(I& result, F& f) {
-    internal::reverse_visit(result.getValue(), f);
+    internal::reverse_visit<I::template container_type>(result.getValue(), f);
   }
 
   struct Visitor {};
 
-} // namespace model
+  template<typename... Args>
+  using model = boost::mpl::list<Args...>;
+
+} // namespace a2b

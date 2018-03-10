@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <a2b/translator.h>
 
+#include <vector>
 #include <sstream>
 
 /*
@@ -43,7 +44,7 @@ namespace B {
   };
 
   // Definition of the model of the namespace B
-  typedef boost::mpl::list<Personne, Equipe, Chambre> Model;
+  typedef a2b::model<Personne, Equipe, Chambre> Model;
 } // namespace B
 
 // The list of translations for each object of namespace A to lists of objects of namespace B
@@ -87,7 +88,7 @@ TEST(Translate, Person) {
   auto const& result = tr.translate(simpson);
   ASSERT_EQ(size_t(1), result.get<B::Personne>().size());
   // and having a list of Persons
-  std::list<A::Person> const simpsons = {{"Lisa", 8}, {"Bart", 10}};
+  std::vector<A::Person> const simpsons = {{"Lisa", 8}, {"Bart", 10}};
   tr.translate(simpsons);
   // ... we get a list of Personnes
   ASSERT_EQ(size_t(3), result.get<B::Personne>().size());
@@ -152,7 +153,7 @@ private:
 
 TEST(Translate, Visit) {
   std::vector<A::Person> const ap = {{ "name", 13 }};
-  std::vector<A::Room> const ar = {{ 42 }};
+  std::list<A::Room> const ar = {{ 42 }};
   A2B tr;
   // First let's translate people
   tr.translate(ap);
