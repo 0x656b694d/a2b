@@ -25,6 +25,9 @@ The usage consists of these steps:
    ```c++
    class Translate2B: public a2b::Translator<Translate2B, ModelB> {
    public:
+   
+     using base_type::translate; // to bring in some generic translations
+     
      result_type translate(ObjectA1 const& obj) {
        return add( ObjectB1{ obj.x, obj.y } );
      }
@@ -36,7 +39,7 @@ The usage consists of these steps:
    ```c++
    class Translate2B: public a2b::Translator<Translate2B, ModelB, std::vector>;
    ```
-   The result of the translation in this case will be an `std::tuple` of different `std::vector` types.
+   The result of the translation in this case will have an `std::tuple` of different `std::vector` types.
 
 1. Translate an object (or a collection of objects) by calling the `translate` method:
    ```c++
