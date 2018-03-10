@@ -1,12 +1,10 @@
 # Model Translation Utility
 
-The objective of the utility is to simplify the translation of one object model to another.
+The objective of the utility is to simplify data translation from one object model to another. Examples of such translations are: BOM to API, ORM to BOM etc. There might be a need to support several versions of such translations like if one had several versions of API to support in parallel.
 
-A model represents a list of classes. A single object of a class in the source model can be translated to a number of objects of different classes in the destination model.
+A model is given to the utility as a list of classes (type list). A single object of a class in the source model can be translated to a number of objects of different classes in the destination model.
 
 The utility generates in compile time a special structure, which has inside an `std::tuple<std::list<T1>, std::list<T2>, ...>`, where each `std::list<Tx>` may hold a number of objects of the destination model. The model is defined as a `boost::mpl::list<T1, T2, ...>`. In your translation method you call the provided `add(tx)` function which appends to the appropriate list. After the translation is complete (= the structure is filled), you may visit all the generated objects in the order of types that you have specified in the model definition. The order matters in the case when, for example, you need to create parent objects before creating children which reference the parent. The reverse order would allow for deleting children before deleting the parent.
-
-Examples of such transformations are: BOM to API, ORM to BOM etc. You may need to support several versions of such transformations.
 
 ![Scheme](docs/scheme.svg)
 
