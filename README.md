@@ -14,8 +14,13 @@ The usage consists of these steps:
 
 1. Define the destination model `ModelB` with the required order of classes:
    ```c++
+   typedef a2b::model<ObjectB1, ObjectB2> ModelB;
+   ```
+   or, which is the same:
+   ```c++
    typedef boost::mpl::list<ObjectB1, ObjectB2> ModelB;
    ```
+
 1. Derive your translator `Translate2B` from `a2b::Translator<Translate2B, ModelB>`, use `add` to fill the resulting structure:
    ```c++
    class Translate2B: public a2b::Translator<Translate2B, ModelB> {
